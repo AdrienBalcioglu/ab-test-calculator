@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A/B Test Calculator</title>
+<style>:root{--bg:#f7f7f5;--panel:#fff;--ink:#1c1c1a;--muted:#6b6b66;--line:#e3e3de;--accent:#3d5afe;--accent-ink:#fff;--good:#1a7f4b;--bad:#b3261e;--warn:#9a6700;--soft:#eef0ff;--radius:10px;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root{--bg:#141413;--panel:#1d1d1b;--ink:#ececE6;--muted:#9a9a93;--line:#30302c;--accent:#8c9eff;--accent-ink:#11122b;--good:#5fd39a;--bad:#ff8a80;--warn:#e3b341;--soft:#23264a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1080px;margin:0 auto;padding:28px 16px 64px}
+header.top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+h1{font-size:24px;margin:0;letter-spacing:-.01em}
+h2{font-size:15px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+p.lead{margin:4px 0 0;color:var(--muted);max-width:62ch}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.grid{display:grid;gap:16px}
+@media(min-width:820px){.cols-2{grid-template-columns:1fr 1fr}.cols-3{grid-template-columns:repeat(3,1fr)}.side{grid-template-columns:340px 1fr}}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+input,select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+textarea{min-height:120px;resize:vertical}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.field{margin-bottom:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{font:inherit;font-weight:600;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 14px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.ghost{border-color:transparent;color:var(--muted);padding:4px 8px}
+button:disabled{opacity:.5;cursor:not-allowed}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+td input{padding:5px 7px}
+.scroll{overflow-x:auto}
+.stat{font-size:28px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat small{display:block;font-size:12px;font-weight:500;color:var(--muted);letter-spacing:0}
+.muted{color:var(--muted)}.good{color:var(--good)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--soft);color:var(--accent)}
+.out{white-space:pre-wrap;word-wrap:break-word;font-size:14.5px;min-height:120px}
+.out.mono,code{font-family:var(--mono);font-size:13px}
+.note{font-size:13px;color:var(--muted)}
+footer{margin-top:28px;font-size:13px;color:var(--muted)}
+footer a{color:inherit}
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div>
+      <h1>A/B Test Calculator</h1>
+      <p class="lead">Plan a test before you run it, then check the result once it is over. Two-sided test on conversion rates.</p>
+    </div>
+  </header>
+
+  <div class="grid cols-2">
+    <section class="panel">
+      <h2>1. Plan: sample size and duration</h2>
+      <div class="grid cols-2">
+        <div class="field"><label for="base">Baseline conversion rate (%)</label><input id="base" type="number" min="0.01" max="99" step="0.1" value="4"></div>
+        <div class="field"><label for="mde">Minimum detectable effect (relative %)</label><input id="mde" type="number" min="0.1" step="0.5" value="10"></div>
+        <div class="field"><label for="alpha">Confidence level</label><select id="alpha"><option value="0.10">90%</option><option value="0.05" selected>95%</option><option value="0.01">99%</option></select></div>
+        <div class="field"><label for="power">Statistical power</label><select id="power"><option value="0.8" selected>80%</option><option value="0.9">90%</option></select></div>
+        <div class="field"><label for="variants">Number of variants (control included)</label><input id="variants" type="number" min="2" max="10" value="2"></div>
+        <div class="field"><label for="traffic">Visitors per day in the test</label><input id="traffic" type="number" min="1" value="2000"></div>
+      </div>
+      <div class="grid cols-3" style="margin-top:6px">
+        <div class="stat" id="perVariant">–<small>visitors per variant</small></div>
+        <div class="stat" id="total">–<small>visitors in total</small></div>
+        <div class="stat" id="days">–<small>days to run</small></div>
+      </div>
+      <p id="planNote" class="note"></p>
+    </section>
+
+    <section class="panel">
+      <h2>2. Read: is the result significant?</h2>
+      <div class="grid cols-2">
+        <div class="field"><label for="va">Control: visitors</label><input id="va" type="number" min="1" value="10000"></div>
+        <div class="field"><label for="ca">Control: conversions</label><input id="ca" type="number" min="0" value="400"></div>
+        <div class="field"><label for="vb">Variant: visitors</label><input id="vb" type="number" min="1" value="10000"></div>
+        <div class="field"><label for="cb">Variant: conversions</label><input id="cb" type="number" min="0" value="460"></div>
+      </div>
+      <div class="grid cols-3" style="margin-top:6px">
+        <div class="stat" id="uplift">–<small>relative uplift</small></div>
+        <div class="stat" id="pvalue">–<small>p-value</small></div>
+        <div class="stat" id="ci">–<small>95% interval on the difference</small></div>
+      </div>
+      <p id="verdict" class="note"></p>
+    </section>
+  </div>
+
+  <section class="panel">
+    <h2>Good practice</h2>
+    <p class="note" style="margin:0">Decide the sample size before the test and do not stop early because the result looks good: checking repeatedly inflates false positives. Run for whole weeks so that weekdays and weekends are both covered. With more than two variants, the confidence level is adjusted (Bonferroni) so the overall error rate stays the one you chose.</p>
+  </section>
+  <footer>MIT license · © 2026 Adrien Balcioglu · Runs entirely in your browser.</footer>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const val = (id) => parseFloat($(id).value);
+const fmt = (n) => Math.ceil(n).toLocaleString('en-US');
+
+// Standard normal CDF (Abramowitz-Stegun 7.1.26) and its inverse (Acklam).
+function cdf(x) {
+  const t = 1 / (1 + 0.3275911 * Math.abs(x) / Math.SQRT2);
+  const erf = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-(x * x) / 2);
+  return x >= 0 ? (1 + erf) / 2 : (1 - erf) / 2;
+}
+function inv(p) {
+  const a = [-39.69683028665376, 220.9460984245205, -275.9285104469687, 138.3577518672690, -30.66479806614716, 2.506628277459239];
+  const b = [-54.47609879822406, 161.5858368580409, -155.6989798598866, 66.80131188771972, -13.28068155288572];
+  const c = [-0.007784894002430293, -0.3223964580411365, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783];
+  const d = [0.007784695709041462, 0.3224671290700398, 2.445134137142996, 3.754408661907416];
+  const lo = 0.02425;
+  if (p < lo) { const q = Math.sqrt(-2 * Math.log(p)); return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  if (p > 1 - lo) return -inv(1 - p);
+  const q = p - 0.5, r = q * q;
+  return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5]) * q / (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+}
+
+function plan() {
+  const p1 = val('base') / 100, lift = val('mde') / 100, variants = Math.max(2, Math.round(val('variants')));
+  const p2 = p1 * (1 + lift);
+  const ok = p1 > 0 && p1 < 1 && lift > 0 && p2 < 1 && val('traffic') > 0;
+  if (!ok) {
+    for (const id of ['perVariant', 'total', 'days']) $(id).firstChild.textContent = '–';
+    $('planNote').textContent = 'Enter a baseline between 0 and 100% and an effect that keeps the target rate under 100%.';
+    return;
+  }
+  const alpha = val('alpha') / (variants - 1); // Bonferroni across comparisons with the control
+  const zA = inv(1 - alpha / 2), zB = inv(val('power'));
+  const pBar = (p1 + p2) / 2;
+  const n = Math.pow(zA * Math.sqrt(2 * pBar * (1 - pBar)) + zB * Math.sqrt(p1 * (1 - p1) + p2 * (1 - p2)), 2) / Math.pow(p2 - p1, 2);
+  const total = Math.ceil(n) * variants, days = total / val('traffic');
+  $('perVariant').firstChild.textContent = fmt(n);
+  $('total').firstChild.textContent = fmt(total);
+  $('days').firstChild.textContent = fmt(days);
+  const weeks = Math.ceil(days / 7);
+  $('planNote').textContent = `You are testing whether the rate moves from ${(p1 * 100).toFixed(2)}% to ${(p2 * 100).toFixed(2)}%. Plan for ${weeks} full week${weeks > 1 ? 's' : ''}.` +
+    (days > 56 ? ' That is long: consider a larger effect, more traffic, or a metric higher in the funnel.' : '');
+}
+
+function read() {
+  const na = val('va'), nb = val('vb'), xa = val('ca'), xb = val('cb');
+  if (!(na > 0 && nb > 0 && xa >= 0 && xb >= 0 && xa <= na && xb <= nb)) {
+    for (const id of ['uplift', 'pvalue', 'ci']) $(id).firstChild.textContent = '–';
+    $('verdict').textContent = 'Conversions cannot exceed visitors.'; $('verdict').className = 'note';
+    return;
+  }
+  const pa = xa / na, pb = xb / nb, pooled = (xa + xb) / (na + nb);
+  const se = Math.sqrt(pooled * (1 - pooled) * (1 / na + 1 / nb));
+  const z = se > 0 ? (pb - pa) / se : 0;
+  const p = 2 * (1 - cdf(Math.abs(z)));
+  const seDiff = Math.sqrt(pa * (1 - pa) / na + pb * (1 - pb) / nb);
+  const lo = (pb - pa - 1.96 * seDiff) * 100, hi = (pb - pa + 1.96 * seDiff) * 100;
+  const uplift = pa > 0 ? (pb / pa - 1) * 100 : 0;
+  $('uplift').firstChild.textContent = (uplift >= 0 ? '+' : '') + uplift.toFixed(1) + '%';
+  $('pvalue').firstChild.textContent = p < 0.0001 ? '< 0.0001' : p.toFixed(4);
+  $('ci').firstChild.textContent = `${lo.toFixed(2)} to ${hi.toFixed(2)} pts`;
+  const sig = p < 0.05;
+  $('verdict').className = 'note ' + (sig ? (pb > pa ? 'good' : 'bad') : 'warn');
+  $('verdict').textContent = sig
+    ? `Significant at 95%: the variant ${pb > pa ? 'beats' : 'loses to'} the control (${(pa * 100).toFixed(2)}% vs ${(pb * 100).toFixed(2)}%).`
+    : `Not significant at 95%: this difference (${(pa * 100).toFixed(2)}% vs ${(pb * 100).toFixed(2)}%) could be noise. Keep the test running until the planned sample is reached.`;
+}
+
+document.querySelectorAll('input,select').forEach((el) => el.addEventListener('input', () => { plan(); read(); }));
+plan(); read();
+</script>
+</body>
+</html>
