@@ -1,8 +1,8 @@
 # A/B Test Calculator
 
 Plan the sample size and duration of an A/B test, then check whether the result is significant.
-**[Try it live](https://adrienbalcioglu.github.io/ab-test-calculator/)**
 
+**[Website](https://adrienbalcioglu.github.io/ab-test-calculator/about.html)** · **[Open the app](https://adrienbalcioglu.github.io/ab-test-calculator/)**
 
 ## Features
 
